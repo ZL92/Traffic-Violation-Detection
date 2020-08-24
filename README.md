@@ -1,4 +1,7 @@
 # Traffic-Violation-Detection
 
-To-be-used Lane Detection source: https://github.com/wvangansbeke/LaneDetection_End2End
-Other lane detection sources: https://github.com/amusi/awesome-lane-detection
+Lane detection datasets: https://www.marsbigdata.com/community/details?id=7362091387904
+
+Lane detection algorithms: https://github.com/amusi/awesome-lane-detection
+
+To be used lane detection: https://github.com/cfzd/Ultra-Fast-Lane-Detection
