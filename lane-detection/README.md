@@ -80,13 +80,13 @@ Same as training, multi-gpu evaluation is also supported.
 
 # Visualization
 
-First move trained model, the test.mp4 to lane-detection directory.
+First move trained model to lane-detection directory.
 
-run the mp4tolist.py to create corresponding test.txt
+run the mp4tolist.py to batch create corresponding test.txt s. change the paths in mp4tolist.py
 
-change the path in config/tusimple.py
+change the configs/tusimple.py according to your own environment path except the data_root
 
-run demo.py configs/tusimple.py
+run batch_demo.py, change the path!
 
 We provide a script to visualize the detection results. Run the following commands to visualize on the testing set of CULane and Tusimple.
 ```Shell
