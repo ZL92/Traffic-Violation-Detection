@@ -11,3 +11,7 @@ A semantic video sementation but to install need GPU: https://github.com/irfanIC
 A powerful but big system https://github.com/diyjac/SDC-P5
 
 NVIDIA semantic segmentation https://github.com/NVIDIA/semantic-segmentation
+
+Github Image-Inpainting https://github.com/geekyutao/Image-Inpainting
+
+Image-Inpainting to be used https://github.com/Atlas200dk/sample-imageinpainting-HiFill
