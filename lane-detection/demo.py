@@ -84,8 +84,7 @@ if __name__ == "__main__":
             
             #print("out_j type {}".format(type(out_j)))
             prob = scipy.special.softmax(out_j[:-1, :, :], axis=0)
-            
-            #print("prob type {}".format(type(prob)))
+            #print("prob shape {}".format(prob.shape))
             idx = np.arange(cfg.griding_num) + 1
             #print("idx {}".format(idx))
             idx = idx.reshape(-1, 1, 1)
@@ -96,7 +95,7 @@ if __name__ == "__main__":
             #print("out_j type {}".format(type(out_j)))
             loc[out_j == cfg.griding_num] = 0
             out_j = loc
-
+            prob[prob<0.01] = 0
             # import pdb; pdb.set_trace()
             vis = cv2.imread(os.path.join(cfg.data_root,names[0]))
             emptyImage = np.zeros(vis.shape,np.uint8)
@@ -113,8 +112,10 @@ if __name__ == "__main__":
                 if np.sum(out_j[:, i] != 0) > 2:
                     for k in range(out_j.shape[0]):
                         if out_j[k, i] > 0:
+                            #print("prob k,i {}".format(prob[:,k,i]))
                             ppp = (int(out_j[k, i] * col_sample_w * img_w / 800) - 1, int(img_h * (row_anchor[cls_num_per_lane-1-k]/288)) - 1 )
                             f.write("{}\t{}\n".format(i,ppp))
+                            f.write("{}\n".format(prob[:,k,i]))
                             cv2.circle(vis,ppp,5,(0,255,0),-1)
                             cv2.circle(emptyImage,ppp,5,color,-1)
             vout.write(vis)
