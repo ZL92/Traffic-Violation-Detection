@@ -1,6 +1,6 @@
 # DATA
 dataset='Tusimple'
-data_root = '/home/gym/Ultra-Fast-Lane-Detection/90/'
+data_root = '/home/gym/video/img/283/'
 
 # TRAIN
 epoch = 100
@@ -29,12 +29,12 @@ shp_loss_w = 0.0
 # EXP
 note = ''
 
-log_path = '/home/gym/Ultra-Fast-Lane-Detection/log/'
+log_path = None
 
 # FINETUNE or RESUME MODEL PATH
 finetune = None
 resume = None
 
 # TEST
-test_model = '/home/gym/Ultra-Fast-Lane-Detection/tusimple_18.pth'
-test_work_dir = '/home/gym/Ultra-Fast-Lane-Detection/test/'
+test_model = '/home/gym/Traffic-Violation-Detection/lane-detection/tusimple_18.pth'
+test_work_dir = '/home/gym/Traffic-Violation-Detection/lane-detection/test/'

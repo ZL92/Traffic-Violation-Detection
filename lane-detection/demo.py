@@ -8,7 +8,10 @@ import numpy as np
 import torchvision.transforms as transforms
 from data.dataset import LaneTestDataset
 from data.constant import culane_row_anchor, tusimple_row_anchor
-
+def mkdir(path):
+    folder = os.path.exists(path)
+    if not folder:
+        os.makedirs(path)   
 if __name__ == "__main__":
     torch.backends.cudnn.benchmark = True
 
@@ -60,34 +63,61 @@ if __name__ == "__main__":
         fourcc = cv2.VideoWriter_fourcc(*'MJPG')
         print(cfg.data_root+split[:-3]+'avi')
         vout = cv2.VideoWriter(cfg.data_root+split[:-3]+'avi', fourcc , 30.0, (img_w, img_h))
+        vout_empty = cv2.VideoWriter(cfg.data_root+'empty_'+split[:-3]+'avi', fourcc , 30.0, (img_w, img_h))
+        mkdir(cfg.data_root+'line/')
         for i, data in enumerate(tqdm.tqdm(loader)):
             imgs, names = data
+            f = open(cfg.data_root+'line/'+names[0][:-3]+'txt','w+')
             imgs = imgs
+            #print("imgs size {}".format(imgs.size()))
             with torch.no_grad():
                 out = net(imgs)
 
+            #print("out size {}".format(out.size()))
             col_sample = np.linspace(0, 800 - 1, cfg.griding_num)
             col_sample_w = col_sample[1] - col_sample[0]
 
 
             out_j = out[0].data.cpu().numpy()
+            #print("out_j\n {}".format(out_j))
             out_j = out_j[:, ::-1, :]
+            
+            #print("out_j type {}".format(type(out_j)))
             prob = scipy.special.softmax(out_j[:-1, :, :], axis=0)
+            
+            #print("prob type {}".format(type(prob)))
             idx = np.arange(cfg.griding_num) + 1
+            #print("idx {}".format(idx))
             idx = idx.reshape(-1, 1, 1)
+            #print("reshape idx {}".format(idx))
             loc = np.sum(prob * idx, axis=0)
+            #print("loc {}".format(loc))
             out_j = np.argmax(out_j, axis=0)
+            #print("out_j type {}".format(type(out_j)))
             loc[out_j == cfg.griding_num] = 0
             out_j = loc
 
             # import pdb; pdb.set_trace()
             vis = cv2.imread(os.path.join(cfg.data_root,names[0]))
+            emptyImage = np.zeros(vis.shape,np.uint8)
+            #print(names[0])
             for i in range(out_j.shape[1]):
+                if i == 0:
+                    color = (255,0,0)
+                elif i == 1:
+                    color = (0,255,0)
+                elif i == 2:
+                    color = (0,0,255)
+                else:
+                    color = (100,100,100)
                 if np.sum(out_j[:, i] != 0) > 2:
                     for k in range(out_j.shape[0]):
                         if out_j[k, i] > 0:
                             ppp = (int(out_j[k, i] * col_sample_w * img_w / 800) - 1, int(img_h * (row_anchor[cls_num_per_lane-1-k]/288)) - 1 )
+                            f.write("{}\t{}\n".format(i,ppp))
                             cv2.circle(vis,ppp,5,(0,255,0),-1)
+                            cv2.circle(emptyImage,ppp,5,color,-1)
             vout.write(vis)
-        
+            vout_empty.write(emptyImage)
+            f.close()
         vout.release()
