@@ -5,6 +5,7 @@ from utils.dist_utils import dist_print
 import torch
 import scipy.special, tqdm
 import numpy as np
+import json
 import torchvision.transforms as transforms
 from data.dataset import LaneTestDataset
 from data.constant import culane_row_anchor, tusimple_row_anchor
@@ -67,7 +68,7 @@ if __name__ == "__main__":
         mkdir(cfg.data_root+'line/')
         for i, data in enumerate(tqdm.tqdm(loader)):
             imgs, names = data
-            f = open(cfg.data_root+'line/'+names[0][:-3]+'txt','w+')
+            f = open(cfg.data_root+'line/'+names[0][:-3]+'json','w+')
             imgs = imgs
             #print("imgs size {}".format(imgs.size()))
             with torch.no_grad():
@@ -100,6 +101,7 @@ if __name__ == "__main__":
             vis = cv2.imread(os.path.join(cfg.data_root,names[0]))
             emptyImage = np.zeros(vis.shape,np.uint8)
             #print(names[0])
+            result = []
             for i in range(out_j.shape[1]):
                 if i == 0:
                     color = (255,0,0)
@@ -111,14 +113,18 @@ if __name__ == "__main__":
                     color = (100,100,100)
                 if np.sum(out_j[:, i] != 0) > 2:
                     for k in range(out_j.shape[0]):
+                        temp_dict = {}
                         if out_j[k, i] > 0:
                             #print("prob k,i {}".format(prob[:,k,i]))
                             ppp = (int(out_j[k, i] * col_sample_w * img_w / 800) - 1, int(img_h * (row_anchor[cls_num_per_lane-1-k]/288)) - 1 )
-                            f.write("{}\t{}\n".format(i,ppp))
-                            f.write("{}\n".format(prob[:,k,i]))
+                            temp_dict['lane_id'] = i
+                            temp_dict['pos'] = ppp
+                            temp_dict['prob'] = prob[:,k,i].tolist()
+                            result.append(temp_dict)
                             cv2.circle(vis,ppp,5,(0,255,0),-1)
                             cv2.circle(emptyImage,ppp,5,color,-1)
             vout.write(vis)
             vout_empty.write(emptyImage)
+            json.dump(result,f)
             f.close()
         vout.release()
