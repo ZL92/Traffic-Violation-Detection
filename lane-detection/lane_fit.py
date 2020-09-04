@@ -12,9 +12,9 @@ from scipy.misc import derivative
 path = "/home/gym/video/img/" #文件夹目录
 def mkdir(path):
     folder = os.path.exists(path)
+    print("mkdir {}".format(path))
     if not folder:
         os.makedirs(path)
-
 ###### if want to use Polar Coords, see https://stackoom.com/question/3vV96/%E6%9B%B2%E7%BA%BF%E6%8B%9F%E5%90%88%E5%92%8Cmatplotlib. Here we just use x-y to y-x
 #def PolarCoords(lane):
 #    x_avg = x.mean()
@@ -99,17 +99,18 @@ def Evaluation(error,c,w):
     return w/(1280*error+c)
 
 def LaneFitMain(lane_data,file_name,vout=None):
-    good_lane = []
     img_file_name = file_name.replace('line/','')[:-4]+'jpg'
     print("fitting img {}".format(img_file_name))
     vis = cv2.imread(img_file_name)
     vis_good_lane = cv2.imread(img_file_name)
     for id in lane_data:
         if len(lane_data[id]['x']) < 7:
+            lane_data[id]['para'] = []
             continue
         lane_data[id]['x'] = np.array(lane_data[id]['x'])
         lane_data[id]['y'] = np.array(lane_data[id]['y'])
         para_3 = LaneFit_3(lane_data[id],vis)
+        lane_data[id]['para'] = para_3[0]
         error = Error_3(para_3[0],lane_data[id]['y'],lane_data[id]['x'])
         error = np.std(error,ddof=1)
         #error = np.sqrt(np.sum(error**2))/len(error)
@@ -124,10 +125,14 @@ def LaneFitMain(lane_data,file_name,vout=None):
         print("{}th lane's score is {}".format(id,score))
         if score > 0.8:
             LaneFit_3(lane_data[id],vis_good_lane)
+        lane_data[id]['x'] = lane_data[id]['x'].tolist()
+        lane_data[id]['y'] = lane_data[id]['y'].tolist()
+        lane_data[id]['para'] = lane_data[id]['para'].tolist()
     vout.write(vis_good_lane)
 
 dirs= os.listdir(path) #得到文件夹下的所有文件名称
 for dir in dirs: #遍历文件夹
+    mkdir(path + dir + '/para/')
     if not os.path.isdir(path+dir): #判断是否是文件夹，不是文件夹才打开
         continue
     fourcc = cv2.VideoWriter_fourcc(*'MJPG')
@@ -144,6 +149,7 @@ for dir in dirs: #遍历文件夹
         file_name = dir + file
         f = open(file_name,'r')
         pop_data = json.load(f)
+        push_data = []
         lane_data = {}
         for data in pop_data:
             lane_id = data["lane_id"]
@@ -160,6 +166,10 @@ for dir in dirs: #遍历文件夹
                 lane_data[lane_id]['y']=[pos[1]]
             #print("{}  {}".format(lane_id,pos))
         LaneFitMain(lane_data,file_name,vout)
+        push_data.append(lane_data)
+        push_file_name = file_name.replace('line/','para/')
+        with open(push_file_name,'w',encoding='utf-8') as push_file:
+            json.dump(push_data,push_file,ensure_ascii=False)
         f.close()
     vout.release()
 
