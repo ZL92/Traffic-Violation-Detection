@@ -9,6 +9,7 @@ import json
 import torchvision.transforms as transforms
 from data.dataset import LaneTestDataset
 from data.constant import culane_row_anchor, tusimple_row_anchor
+
 def mkdir(path):
     folder = os.path.exists(path)
     if not folder:
@@ -54,7 +55,7 @@ if __name__ == "__main__":
         row_anchor = culane_row_anchor
     elif cfg.dataset == 'Tusimple':
         splits = ['test.txt']
-        datasets = [LaneTestDataset(cfg.data_root,os.path.join(cfg.data_root, split),img_transform = img_transforms) for split in splits]
+        datasets = [LaneTestDataset(cfg.data_root,os.path.join(cfg.data_root, split), img_transform = img_transforms) for split in splits]
         img_w, img_h = 1280, 720
         row_anchor = tusimple_row_anchor
     else:
