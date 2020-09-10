@@ -110,12 +110,13 @@ def LaneFitMain(lane_data,file_name,vout=None):
         lane_data[id]['x'] = np.array(lane_data[id]['x'])
         lane_data[id]['y'] = np.array(lane_data[id]['y'])
         para_3 = LaneFit_3(lane_data[id],vis)
-        lane_data[id]['para'] = para_3[0]
+        lane_data[id]['para_3'] = para_3[0]
         error = Error_3(para_3[0],lane_data[id]['y'],lane_data[id]['x'])
         error = np.std(error,ddof=1)
         #error = np.sqrt(np.sum(error**2))/len(error)
         #print("fitting {}th lane, with the total error {}.".format(id,error))
         para_6 = LaneFit_6(lane_data[id])
+        lane_data[id]['para_6'] = para_6[0]
         w = Weight(lane_data[id])
         #print("weight {}".format(w))
         C = Curve(para_6,lane_data[id])
@@ -127,7 +128,10 @@ def LaneFitMain(lane_data,file_name,vout=None):
             LaneFit_3(lane_data[id],vis_good_lane)
         lane_data[id]['x'] = lane_data[id]['x'].tolist()
         lane_data[id]['y'] = lane_data[id]['y'].tolist()
-        lane_data[id]['para'] = lane_data[id]['para'].tolist()
+        lane_data[id]['para_3'] = lane_data[id]['para_3'].tolist()
+        lane_data[id]['para_6'] = lane_data[id]['para_6'].tolist()
+        lane_data[id]['score'] = score
+
     vout.write(vis_good_lane)
 
 dirs= os.listdir(path) #得到文件夹下的所有文件名称

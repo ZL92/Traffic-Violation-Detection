@@ -9,11 +9,13 @@ import json
 import torchvision.transforms as transforms
 from data.dataset import LaneTestDataset
 from data.constant import culane_row_anchor, tusimple_row_anchor
-
 def mkdir(path):
     folder = os.path.exists(path)
     if not folder:
         os.makedirs(path)   
+        return False
+    else:
+        return True
 if __name__ == "__main__":
     torch.backends.cudnn.benchmark = True
 
@@ -55,7 +57,7 @@ if __name__ == "__main__":
         row_anchor = culane_row_anchor
     elif cfg.dataset == 'Tusimple':
         splits = ['test.txt']
-        datasets = [LaneTestDataset(cfg.data_root,os.path.join(cfg.data_root, split), img_transform = img_transforms) for split in splits]
+        datasets = [LaneTestDataset(cfg.data_root,os.path.join(cfg.data_root, split),img_transform = img_transforms) for split in splits]
         img_w, img_h = 1280, 720
         row_anchor = tusimple_row_anchor
     else:
@@ -66,7 +68,10 @@ if __name__ == "__main__":
         print(cfg.data_root+split[:-3]+'avi')
         vout = cv2.VideoWriter(cfg.data_root+split[:-3]+'avi', fourcc , 30.0, (img_w, img_h))
         vout_empty = cv2.VideoWriter(cfg.data_root+'empty_'+split[:-3]+'avi', fourcc , 30.0, (img_w, img_h))
-        mkdir(cfg.data_root+'line/')
+        have_exist = mkdir(cfg.data_root+'line/')
+        if have_exist:
+            print("have already been produced")
+            continue
         for i, data in enumerate(tqdm.tqdm(loader)):
             imgs, names = data
             f = open(cfg.data_root+'line/'+names[0][:-3]+'json','w+')
