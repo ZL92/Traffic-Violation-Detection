@@ -5,7 +5,9 @@ pip2.7 install tensorflow==1.12.0
 pip2.7 install scipy
 ```
 already fix all bug and only should to change path, just try one video to see the result.
-
+```shell
+python2.7 predi...py
+```
 # LaneSegmentationNetwork
 Created by Dongkyu Yu and [Daijin Kim](http://imlab.postech.ac.kr/members_d.htm) at [POSTECH IM Lab](http://imlab.postech.ac.kr)
 
