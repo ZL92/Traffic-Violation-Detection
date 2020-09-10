@@ -33,9 +33,11 @@ Please see [INSTALL.md](./INSTALL.md)
     python3 lane_fit.py
     ```
     
-4. you should run image mask script to get the car mask using all images from video. it should save to /vedio/img/283/mask_folder/ 
+4. you should run image mask script to get the car mask using all images from video. it should save to /vedio/img/283/mask_folder/ .
+    ```Shell
+    ```
      
-5.only using mask of objection(car,bike,people) and hough line method to get a pure CV result. it will save to 'cv_para' folder
+ 5. only using mask of objection(car,bike,people) and hough line method to get a pure CV result. it will save to 'cv_para' folder
     ```Shell
     python3 only_mask_obj.py
     ```
