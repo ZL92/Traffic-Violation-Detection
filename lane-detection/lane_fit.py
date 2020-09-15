@@ -105,7 +105,8 @@ def LaneFitMain(lane_data,file_name,vout=None):
     vis_good_lane = cv2.imread(img_file_name)
     for id in lane_data:
         if len(lane_data[id]['x']) < 7:
-            lane_data[id]['para'] = []
+            lane_data[id]['para_3'] = []
+            lane_data[id]['para_6'] = []
             continue
         lane_data[id]['x'] = np.array(lane_data[id]['x'])
         lane_data[id]['y'] = np.array(lane_data[id]['y'])

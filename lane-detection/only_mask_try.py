@@ -66,17 +66,22 @@ for dir in dirs: #遍历文件夹
         linewidth = 2
         masked_image = cv2.cvtColor(masked_image,cv2.COLOR_GRAY2BGR)
         push_data = []
-        cv_para_data = {}
+        #print("file name {}".format(file_name))
         if lines is not None:
+            #print("lines length {}".format(len(lines)))
             for line in lines:
                 for x1,y1,x2,y2 in line:
+                    cv_para_data = {}
+                    #print("line {},{},{},{}".format(x1,y1,x2,y2))
                     cv_para_data['endpoiont'] = line
                     cv_para_data['endpoiont'] = cv_para_data['endpoiont'].tolist()
                     #print("line type {}".format(type(line)))
                     cv_para_data['length'] = math.sqrt((y2-y1)**2+(x2-x1)**2)
                     cv_para_data['degree'] = math.degrees(math.atan2(y2-y1,x2-x1))%180
+                    #print("cv_data_para {}".format(cv_para_data))
                     #print("cv_para_data {}".format(cv_para_data))
                     push_data.append(cv_para_data)
+                    #print("push data {}".format(push_data))
                     cv2.line(masked_image,(x1,y1),(x2,y2),linecolor,linewidth)
 
         img_name = cut_img_dir + file[:-5]+".jpg"

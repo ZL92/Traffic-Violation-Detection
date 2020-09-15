@@ -25,85 +25,79 @@ dirs= os.listdir(path) #得到文件夹下的所有文件名称
 for dir in dirs: #遍历文件夹
     if not os.path.isdir(path+dir): #判断是否是文件夹，不是文件夹才打开
         continue
-    #fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-    #vout = cv2.VideoWriter(path+dir+'/lane_fit.avi',fourcc,30.0,(1280,720))
-    cut_img_dir = path + dir +'/cut/'
     mask_folder = path+dir+'/mask_folder/'
     if not os.path.exists(mask_folder):
         continue
-    dir = path + dir + '/para/'
-    mkdir(cut_img_dir)
-    if not os.path.exists(dir):
+    ML_para_dir = path + dir + '/para/'
+    if not os.path.exists(ML_para_dir):
         continue
-    files = os.listdir(dir)
+    CV_para_dir = path + dir + '/cv_para/'
+    if not os.path.exists(CV_para_dir):
+        continue
+    files = os.listdir(ML_para_dir)
     files.sort(key = lambda x: int(x[:-5]))
     for file in files:
         if os.path.isdir(file):
             continue
-        file_name = dir + file
+        file_name = ML_para_dir + file
         f = open(file_name,'r')
-        img_file_name = file_name.replace('para/','')[:-4]+'jpg'
+        cv_para_file_name = file_name.replace('para/','cv_para/')
+        cv_f = open(cv_para_file_name,'r')
         mask_img_name = file_name.replace('para/','mask_folder/')[:-4]+'jpg'
         mask_obj = cv2.imread(mask_img_name)
-        mask_obj = cv2.cvtColor(mask_obj,cv2.COLOR_BGR2GRAY)
-        vis = cv2.imread(img_file_name)
+        maks_obj=cv2.cvtColor(mask_obj, cv2.COLOR_BGR2GRAY)
         pop_data = json.load(f)
+        cv_pop_data = json.load(cv_f)
         lane_data = {}
         for data in pop_data:
             for lane_id in data:
-                para_3 = data[lane_id]["para_3"]
-                if len(para) == 0:
+                para_3 = np.array(data[lane_id]["para_3"])
+                if len(para_3) == 0:
+                    print("file name {}".format(file_name))
+                    print("NO FIT PARA HERE")
                     continue
-                y_max = max(data[lane_id]['y'])
-                y_min = min(data[lane_id]['y'])
-                y_upper = int(720 * y_min)
-                y_lower = int(720 * y_max)
-                x_upper_left = int(1280*min(1.,max(Fun_3(para,y_min)-0.05,0.0)))
-                x_upper_right = int(1280*max(0., min(Fun_3(para,y_min)+0.05,1.0)))
-                x_lower_left = int(1280*min(1.,max(Fun_3(para,y_max)-0.05,0.0)))
-                x_lower_right = int(1280*max(0.,min(Fun_3(para,y_max)+0.05,1.0)))
-                print("file:{} id:{} ({:.0f},{:.0f},{:.0f}) to ({:.0f},{:.0f},{:.0f})".format(file,lane_id,x_upper_left,x_upper_right,y_upper,x_lower_left,x_lower_right,y_lower))
-                masked_image = cv2.GaussianBlur(vis,(5,5),0,0)
-                masked_image = cv2.cvtColor(masked_image,cv2.COLOR_BGR2GRAY)
-                masked_image = cv2.Canny(masked_image,50,159)
-                mask=np.zeros(masked_image.shape,dtype=np.uint8)
-                #roi_corners=np.array([[(x_upper_left,y_upper),(x_upper_right,y_upper),(x_lower_right,y_lower),(x_lower_left,y_lower)]],dtype=np.int32)
-                roi_corners=np.array([[(0,360),(0,720),(1280,720),(1280,360)]],dtype=np.int32)
-                ignore_mask_color = 255
-                cv2.fillPoly(mask,roi_corners,ignore_mask_color)
-                masked_image=cv2.bitwise_and(masked_image,mask)
-                masked_image=cv2.bitwise_and(masked_image,mask_obj)
-                ###### hough transformation
-                rho = 1
-                theta = np.pi/180
-                threhold =15
-                minlength = 40
-                maxlengthgap = 20
-                lines = cv2.HoughLinesP(masked_image,rho,theta,threhold,np.array([]),minlength,maxlengthgap)
-#画线
-                linecolor =[0,255,255]
-                linewidth = 2
-                masked_image = cv2.cvtColor(masked_image,cv2.COLOR_GRAY2BGR)
-                if lines is not None:
-                    degree1 = math.degrees(math.atan2(y_upper-y_lower,x_upper_right-x_lower_left))%180
-                    degree2 = math.degrees(math.atan2(y_upper-y_lower,x_upper_left-x_lower_right))%180
-                    #print("degree {},{}".format(degree1,degree2))
-                    for line in lines:
-                        for x1,y1,x2,y2 in line:
-                            degree = math.degrees(math.atan2(y2-y1,x2-x1))%180
-                            #if degree > min(degree1,degree2) and degree < max(degree1,degree2):
-                               # cv2.line(masked_image,(x1,y1),(x2,y2),linecolor,linewidth)
-                            cv2.line(masked_image,(x1,y1),(x2,y2),linecolor,linewidth)
-                '''
-                for i in range(len(data[lane_id]['y'])):
-                    p_ori = (int(data[lane_id]['x'][i]*1280),int(data[lane_id]['y'][i]*720))
-                    cv2.circle(masked_image,p_ori,5,(0,255,0),-1)
-                '''
-                img_name = cut_img_dir + file[:-4]+'_'+str(lane_id)+".jpg"
-                cv2.imwrite(img_name,masked_image)
+                best_line = np.array([])
+                best_line_length = 0.
+                for cv_data in cv_pop_data:
+                    line = np.array(cv_data["endpoiont"][0])
+                    x1,y1,x2,y2 = line
+                    #print("line {},{},{},{}".format(x1,y1,x2,y2))
+                    degree = cv_data["degree"]
+                    x1_fit = Fun_3(para_3,y1/720.)*1280.
+                    x2_fit = Fun_3(para_3,y2/720.)*1280.
+                    degree_fit = math.degrees(math.atan2(y2-y1,x2_fit-x1_fit))%180
+                    x_mid_fit = Fun_3(para_3,0.5*(y1+y2)/720.)*1280.
+                    x_mid = 0.5*(x1+x2)
+                    if abs(x_mid_fit-x_mid) > 30 or abs(degree_fit-degree) > 30:
+                        #print("BAD FIT LANE")
+                        continue
+                    if cv_data["length"]>best_line_length:
+                        best_line_length = cv_data['length']
+                        best_line = line
+                    #print("x_mid_fit {} x_mid {}".format(x_mid_fit,x_mid))
+                    #print("degree_fit {} degree {}".format(degree_fit,degree))
+                    #print("degree diff {}".format(degree_fit-degree))
+                    #print("mid diff {}".format(x_mid_fit-x_mid))
+
+                if len(best_line) == 0:
+                    print("NO GOOD FIT LANE FOR THIS AREA")
+                    continue
+                mask_area = 0
+                y_min = min(best_line[1],best_line[3])-100
+                y_max = max(best_line[1],best_line[3])
+                x_min = min(best_line[0],best_line[2])
+                x_max = max(best_line[0],best_line[2])
+                for i in range(y_min,y_max):
+                    for j in range(x_min,x_max):
+                        if mask_obj[i][j][0] > 200:
+                            mask_area += 1.
+                cover_part = mask_area/(x_max-x_min)
+                if y_max-y_min-cover_part > 40:
+                    print("solild line")
+                else:
+                    print("dotted line")
         f.close()
-        #vout.write(vis)
-    #vout.release()
+        cv_f.close()
 
 
 
