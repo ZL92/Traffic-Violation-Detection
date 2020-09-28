@@ -177,10 +177,3 @@ for dir in dirs: #遍历文件夹
             json.dump(push_data,push_file,ensure_ascii=False)
         f.close()
     vout.release()
-
-
-
-
-
-
-
