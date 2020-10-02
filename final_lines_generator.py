@@ -248,6 +248,7 @@ def clean_conflict_line(final_frame_lines, print_cleaning=True):
 
 
 dirs = os.listdir(path)  # 得到文件夹下的所有文件名称
+# dirs.sort(key=lambda x: int(x))
 for dir in dirs:  # 遍历文件夹
     final_frame_lines = []
     scores = []
@@ -255,8 +256,6 @@ for dir in dirs:  # 遍历文件夹
         continue
     # if dir != "283":
     #     continue
-    # fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-    # vout = cv2.VideoWriter(path+dir+'/lane_fit.avi',fourcc,30.0,(1280,720))
     cv_para_dir = path + dir + '/cv_para/'
     dir = path + dir + '/para/'
     if not os.path.exists(cv_para_dir):
@@ -410,5 +409,18 @@ for dir in dirs:  # 遍历文件夹
                 pass
         clean_conflict_line(final_frame_lines)
     # import pdb; pdb.set_trace()
-    print(len(scores))
+    final_frame_lines = sorted(final_frame_lines, key=lambda x: x['frame'])
+    #Display lines by frame
+    for i in range(len(files)):
+        x, y=[], []
+        num_lines = 0
+        for data in final_frame_lines:
+            if data['frame'] == i:
+                num_lines +=1
+                x = x + data['x']
+                y = y + data['y']
+                # show(x,y)
+            if num_lines>2:
+                show(x, y)
+
     print(dir)
