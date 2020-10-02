@@ -16,6 +16,7 @@ from shapely.geometry.polygon import Polygon
 import matplotlib.pyplot as plt
 import copy
 import time
+
 random.seed(30)
 
 # path = "/home/gym/video/img/" #文件夹目录
@@ -23,6 +24,12 @@ path = "./challenge_testing_data/testing_data/video/img/"
 
 image_x = 1280
 image_y = 720
+
+
+def mkdir(path):
+    folder = os.path.exists(path)
+    if not folder:
+        os.makedirs(path)
 
 
 def show(x, y, frame=-1):
@@ -223,7 +230,7 @@ def infer_line(origin_line, infer_label):
     return new_line
 
 
-def clean_conflict_line(final_frame_lines, print_cleaning=True):
+def clean_conflict_line(final_frame_lines, print_cleaning=False):
     '''
     Check whether two results of the same frame have closed values of 'x_when_y_659' using threshold 100.
     If detected, remove the one with the lower score and change 'inferring' of the higher one to 'inferred'
@@ -232,7 +239,7 @@ def clean_conflict_line(final_frame_lines, print_cleaning=True):
     for result1 in final_frame_lines:
         for result2 in final_frame_lines:
             if result1['x_when_y_650'] != result2['x_when_y_650'] and result1['frame'] == result2['frame']:
-                if abs(result1['x_when_y_650'] - result2['x_when_y_650']) < (100 / 1280):
+                if abs(result1['x_when_y_650'] - result2['x_when_y_650']) < (400 / 1280):
                     cleaned += 1
                     idx_result1, idx_result2 = 0, 0
                     for i in range(0, len(final_frame_lines)):
@@ -365,8 +372,8 @@ for dir in dirs:  # 遍历文件夹
                 score = Evaluation(error / 2, v2, w)
                 scores.append(score)
                 if score > 0.8:
-                    final_line_data['x'] = resampled_x
-                    final_line_data['y'] = resampled_y
+                    final_line_data['x'] = resampled_x.tolist()
+                    final_line_data['y'] = resampled_y.tolist()
                     final_line_data['para_3'] = para_3
                     final_line_data['x_when_y_650'] = Fun_3(para_3[0], 650 / image_y)
                     final_line_data['solid'] = True
@@ -391,7 +398,7 @@ for dir in dirs:  # 遍历文件夹
     for i in range(len(files)):
         final_frame_lines_copy = copy.deepcopy(
             final_frame_lines)  # Should not't iterate the original as the original gets appended while iteration
-        print('Inferring round {} with {} data'.format(i, len(final_frame_lines_copy)))
+        # print('Inferring round {} with {} data'.format(i, len(final_frame_lines_copy)))
         for idx, frame_line in enumerate(final_frame_lines_copy):
             # print('In iteration {}: {} out of {}'.format(i, idx, len(final_frame_lines_copy)))
             if i == 0 and frame_line['inferring'] == 'inferred':
@@ -417,23 +424,34 @@ for dir in dirs:  # 遍历文件夹
                 pass
         clean_conflict_line(final_frame_lines)
     # import pdb; pdb.set_trace()
+    print('In total {} lines'.format(len(final_frame_lines)))
     final_frame_lines = sorted(final_frame_lines, key=lambda x: x['frame'])
-    # Display lines by frame
-    for i in range(1, len(files)+1):
-        print('Display frame {}'.format(i+1))
-        x, y = [], []
-        num_lines = 0
+    # Draw result on frame images and save them
+    corrected_lines_images_path = cv_para_dir.replace('cv_para', 'corrected_lines_images')
+    corrected_lines_data_path = cv_para_dir.replace('cv_para', 'corrected_lines_data')
+    mkdir(corrected_lines_images_path)
+    mkdir(corrected_lines_data_path)
+    for i in range(1, len(files) + 1):
+        saving_json = {
+            'x':[],
+            'y':[],
+            'solid': True
+        }
         for data in final_frame_lines:
             if data['frame'] == i:
-                num_lines += 1
-                if num_lines == 3:
-                    print(i)
-                x = x + data['x']
-                y = y + data['y']
-                # show(x,y)
-            if num_lines > 2:
-                show(x, y, frame=data['frame'])
-                # time.sleep(3)
-                # plt.close()
+                saving_json['x'].append(data['x'])
+                saving_json['y'].append(data['y'])
+        img = cv2.imread(cv_para_dir.replace('cv_para/', '{}.jpg'.format(i)))
+        for idx in range(len(saving_json['x'])):
+            if idx ==0:
+                circle_color = (255,0,0)
+            elif idx ==1:
+                circle_color = (0, 255, 0)
+            else:
+                circle_color = (0, 0, 255)
+            for x, y in zip(saving_json['x'][idx], saving_json['y'][idx]):
+                img = cv2.circle(img, (int(x * image_x), int(y * image_y)), 5, circle_color, thickness=-1)
+        cv2.imwrite('{}corrected_lines_images_{}.jpg'.format(corrected_lines_images_path, i), img)
+        with open('{}{}.json'.format(corrected_lines_data_path, i), 'w', encoding='utf-8') as push_file:
+            json.dump(saving_json, push_file, ensure_ascii=False)
 
-    print(dir)
