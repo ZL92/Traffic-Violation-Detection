@@ -15,6 +15,8 @@ from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 import matplotlib.pyplot as plt
 import copy
+import time
+random.seed(30)
 
 # path = "/home/gym/video/img/" #文件夹目录
 path = "./challenge_testing_data/testing_data/video/img/"
@@ -23,10 +25,13 @@ image_x = 1280
 image_y = 720
 
 
-def show(x, y):
+def show(x, y, frame=-1):
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
-    ax1.set_title('Scatter Plot')
+    if frame != -1:
+        ax1.set_title('Scatter Plot frame{}'.format(frame))
+    else:
+        ax1.set_title('Scatter Plot')
     plt.xlabel('X')
     plt.ylabel('Y')
     ax1.scatter(x, y, c='r', marker='o')
@@ -199,7 +204,8 @@ def infer_line(origin_line, infer_label):
     for x, y in zip(origin_line['x'], origin_line['y']):
         for idx in range(len(matched_cv_grid_list)):
             for x_cv, y_cv in zip(matched_cv_grid_list[idx]['x'], matched_cv_grid_list[idx]['y']):
-                if abs(y - y_cv) <= allowed_error_y and abs(x_cv-x)<20/1280: # To get rid of the parallel cv result
+                if abs(y - y_cv) <= allowed_error_y and abs(
+                        x_cv - x) < 20 / 1280:  # To get rid of the parallel cv result
                     diff_x_y['x_diff'].append(x_cv - x)
                     diff_x_y['y'].append(y)
 
@@ -250,6 +256,7 @@ def clean_conflict_line(final_frame_lines, print_cleaning=True):
 dirs = os.listdir(path)  # 得到文件夹下的所有文件名称
 # dirs.sort(key=lambda x: int(x))
 for dir in dirs:  # 遍历文件夹
+    print('Working on dir ', dir)
     final_frame_lines = []
     scores = []
     if not os.path.isdir(path + dir):  # 判断是否是文件夹，不是文件夹才打开
@@ -376,14 +383,15 @@ for dir in dirs:  # 遍历文件夹
         #     json.dump(push_data,push_file,ensure_ascii=False)
         # push_file.close()
 
-    # Inferring: requires at most 75 rounds; Each round generate at most 1 along right direction and 1 along left direction.
+    # Inferring: requires at most len(files) rounds; Each round generate at most 1 along right direction and 1 along left direction.
     # In the first round, generated 'from_left' and 'frome_right' line based on infered,
     # In the rest rounds, generate 'frome_left' from 'from_left' and change the original one to 'inferred'. Do the same for 'frome_left'.
     # At the end of each round, delete conflicted lines(same frame and x_when_y_650 difference <100 pixel), and change (or keep) the remaining one to 'inferred';
 
-    for i in range(75):
-        final_frame_lines_copy = copy.deepcopy(final_frame_lines) # Should not't iterate the original as the original gets appended while iteration
-        print('Round {} with {} data'.format(i, len(final_frame_lines_copy)))
+    for i in range(len(files)):
+        final_frame_lines_copy = copy.deepcopy(
+            final_frame_lines)  # Should not't iterate the original as the original gets appended while iteration
+        print('Inferring round {} with {} data'.format(i, len(final_frame_lines_copy)))
         for idx, frame_line in enumerate(final_frame_lines_copy):
             # print('In iteration {}: {} out of {}'.format(i, idx, len(final_frame_lines_copy)))
             if i == 0 and frame_line['inferring'] == 'inferred':
@@ -396,13 +404,13 @@ for dir in dirs:  # 遍历文件夹
             elif frame_line['inferring'] == 'from_right':
                 if frame_line['frame'] > 1:
                     inferred_from_right = infer_line(origin_line=frame_line, infer_label='from_right')
-                    final_frame_lines[idx]['inferring'] = 'inferred' # Change in the original one not the copied!!!
+                    final_frame_lines[idx]['inferring'] = 'inferred'  # Change in the original one not the copied!!!
                     # frame_line['inferring'] = 'inferred' # Change in the original one not the copied!!!
                     final_frame_lines.append(inferred_from_right)
             elif frame_line['inferring'] == 'from_left':
                 if frame_line['frame'] < len(files):
                     inferred_from_left = infer_line(origin_line=frame_line, infer_label='from_left')
-                    final_frame_lines[idx]['inferring'] = 'inferred' # Change in the original one not the copied!!!
+                    final_frame_lines[idx]['inferring'] = 'inferred'  # Change in the original one not the copied!!!
                     # frame_line['inferring'] = 'inferred' # Change in the original one not the copied!!!
                     final_frame_lines.append(inferred_from_left)
             else:
@@ -410,17 +418,22 @@ for dir in dirs:  # 遍历文件夹
         clean_conflict_line(final_frame_lines)
     # import pdb; pdb.set_trace()
     final_frame_lines = sorted(final_frame_lines, key=lambda x: x['frame'])
-    #Display lines by frame
-    for i in range(len(files)):
-        x, y=[], []
+    # Display lines by frame
+    for i in range(1, len(files)+1):
+        print('Display frame {}'.format(i+1))
+        x, y = [], []
         num_lines = 0
         for data in final_frame_lines:
             if data['frame'] == i:
-                num_lines +=1
+                num_lines += 1
+                if num_lines == 3:
+                    print(i)
                 x = x + data['x']
                 y = y + data['y']
                 # show(x,y)
-            if num_lines>2:
-                show(x, y)
+            if num_lines > 2:
+                show(x, y, frame=data['frame'])
+                # time.sleep(3)
+                # plt.close()
 
     print(dir)
