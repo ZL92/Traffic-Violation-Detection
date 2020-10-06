@@ -67,6 +67,12 @@ def Error_3(p, y, x):
 
 
 def LaneFit_3(y, x):
+    '''
+    First y then x
+    :param y:
+    :param x:
+    :return:
+    '''
     p_init = [0, 0, 0, 0.5]
     para = leastsq(Error_3, p_init, args=(y, x))
     return para
@@ -82,6 +88,12 @@ def Error_6(p, y, x):
 
 
 def LaneFit_6(y, x):
+    '''
+    First y then x
+    :param y:
+    :param x:
+    :return:
+    '''
     p_init = [0, 0, 0, 0, 0, 0, 0.5]
     para = leastsq(Error_6, p_init, args=(y, x))
     return para
@@ -165,7 +177,7 @@ def infer_line(origin_line, infer_label):
         'para_3': [0, 0, 0, 0],
         'x_when_y_650': [],
         'solid': True,  # Ture or False
-        'overall_score': 0.6,
+        'overall_score': [],
         'inferring': infer_label  # from_left, from_right, inferred
     }
 
@@ -224,9 +236,32 @@ def infer_line(origin_line, infer_label):
         new_line['x_when_y_650'] = origin_line['x_when_y_650']
     else:
         diff_x_pixel = sum(diff_x_y['x_diff']) / len(diff_x_y['x_diff'])
-        new_line['x'] = [(xxxx + diff_x_pixel) for xxxx in origin_line['x']]
-        new_line['y'] = origin_line['y']
+        for x_origin, y_origin in zip(origin_line['x'], origin_line['y']):
+            x_diff_new = []
+            for idx, y_diff in enumerate(diff_x_y['y']):
+                if y_diff == y_origin:
+                    x_diff_new.append(diff_x_y['x_diff'][idx])
+            if len(x_diff_new) != 0:
+                new_line['x'].append((sum(x_diff_new) / len(x_diff_new)) + x_origin)
+            else:
+                new_line['x'].append(diff_x_pixel + x_origin)
+            new_line['y'].append(y_origin)
+        # new_line['x'] = [(xxxx + diff_x_pixel) for xxxx in origin_line['x']]
+        # new_line['y'] = origin_line['y']
         new_line['x_when_y_650'] = origin_line['x_when_y_650'] + diff_x_pixel
+
+    # Regression and score calculation
+    xxxxxxxxx = np.asarray(new_line['x'])
+    yyyyyyyyy = np.asarray(new_line['y'])
+    para_3 = LaneFit_3(yyyyyyyyy, xxxxxxxxx)
+    error = Error_3(para_3[0], yyyyyyyyy, xxxxxxxxx)
+    error = np.std(error, ddof=1)
+    w = Weight(xxxxxxxxx)
+    v2 = 2 * abs(para_3[0][0]) + abs(para_3[0][1])
+    score = Evaluation(error / 2, v2, w)
+    new_line['overall_score'] = score
+    new_line['para_3'] = para_3[0].tolist()
+    new_line['x_when_y_650'] = Fun_3(para_3[0].tolist(), 650 / image_y)
     return new_line
 
 
@@ -268,7 +303,7 @@ for dir in dirs:  # 遍历文件夹
     scores = []
     if not os.path.isdir(path + dir):  # 判断是否是文件夹，不是文件夹才打开
         continue
-    # if dir != "283":
+    # if dir != "20":
     #     continue
     cv_para_dir = path + dir + '/cv_para/'
     dir = path + dir + '/para/'
@@ -354,7 +389,10 @@ for dir in dirs:  # 遍历文件夹
                 flattened_cv_y = [y for x in cv_grid_y for y in x]
                 pairs_cv = list(zip(flattened_cv_x, flattened_cv_y))
                 # print("pairs_cv {}".format(pairs_cv))
-                pairs_cv = random.sample(pairs_cv, int(num_fit * cv_vs_fit_ratio))
+                try:
+                    pairs_cv = random.sample(pairs_cv, int(num_fit * cv_vs_fit_ratio))
+                except:
+                    continue
                 fit_x, fit_y = line_data['x'], line_data['y']
                 cv_x, cv_y = [x[0] for x in pairs_cv], [x[1] for x in pairs_cv]
                 resampled_x = fit_x + cv_x
@@ -362,7 +400,7 @@ for dir in dirs:  # 遍历文件夹
                 resampled_x = np.asarray(resampled_x)
                 resampled_y = np.asarray(resampled_y)
                 # show(cv_x,cv_y)
-                if len(resampled_x) <= 7:
+                if len(resampled_x) <= 4:
                     continue
                 para_3 = LaneFit_3(resampled_y, resampled_x)
                 error = Error_3(para_3[0], resampled_y, resampled_x)
@@ -374,8 +412,8 @@ for dir in dirs:  # 遍历文件夹
                 if score > 0.8:
                     final_line_data['x'] = resampled_x.tolist()
                     final_line_data['y'] = resampled_y.tolist()
-                    final_line_data['para_3'] = para_3
-                    final_line_data['x_when_y_650'] = Fun_3(para_3[0], 650 / image_y)
+                    final_line_data['para_3'] = para_3[0].tolist()
+                    final_line_data['x_when_y_650'] = Fun_3(para_3[0].tolist(), 650 / image_y)
                     final_line_data['solid'] = True
                     final_line_data['overall_score'] = score
                     final_line_data['inferring'] = 'inferred'  # from_left, from_right, inferred
@@ -422,36 +460,36 @@ for dir in dirs:  # 遍历文件夹
                     final_frame_lines.append(inferred_from_left)
             else:
                 pass
+
         clean_conflict_line(final_frame_lines)
     # import pdb; pdb.set_trace()
     print('In total {} lines'.format(len(final_frame_lines)))
     final_frame_lines = sorted(final_frame_lines, key=lambda x: x['frame'])
+
     # Draw result on frame images and save them
     corrected_lines_images_path = cv_para_dir.replace('cv_para', 'corrected_lines_images')
     corrected_lines_data_path = cv_para_dir.replace('cv_para', 'corrected_lines_data')
     mkdir(corrected_lines_images_path)
     mkdir(corrected_lines_data_path)
     for i in range(1, len(files) + 1):
-        saving_json = {
-            'x':[],
-            'y':[],
-            'solid': True
-        }
+        saving_json = []
         for data in final_frame_lines:
             if data['frame'] == i:
-                saving_json['x'].append(data['x'])
-                saving_json['y'].append(data['y'])
+                saving_json.append(data)
         img = cv2.imread(cv_para_dir.replace('cv_para/', '{}.jpg'.format(i)))
-        for idx in range(len(saving_json['x'])):
-            if idx ==0:
-                circle_color = (255,0,0)
-            elif idx ==1:
-                circle_color = (0, 255, 0)
-            else:
-                circle_color = (0, 0, 255)
-            for x, y in zip(saving_json['x'][idx], saving_json['y'][idx]):
-                img = cv2.circle(img, (int(x * image_x), int(y * image_y)), 5, circle_color, thickness=-1)
+        # for idx in range(len(saving_json['x'])):
+        #     if idx == 0:
+        #         circle_color = (255, 0, 0)
+        #     elif idx == 1:
+        #         circle_color = (0, 255, 0)
+        #     else:
+        #         circle_color = (0, 0, 255)
+        #     for x, y in zip(saving_json['x'][idx], saving_json['y'][idx]):
+        #         img = cv2.circle(img, (int(x * image_x), int(y * image_y)), 5, circle_color, thickness=-1)
+
+        for frame_line_data in saving_json:
+            for x, y in zip(frame_line_data['x'], frame_line_data['y']):
+                img = cv2.circle(img, (int(x * image_x), int(y * image_y)), 5, (0, 255, 0), thickness=-1)
         cv2.imwrite('{}corrected_lines_images_{}.jpg'.format(corrected_lines_images_path, i), img)
         with open('{}{}.json'.format(corrected_lines_data_path, i), 'w', encoding='utf-8') as push_file:
             json.dump(saving_json, push_file, ensure_ascii=False)
-
