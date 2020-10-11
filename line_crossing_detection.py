@@ -228,5 +228,5 @@ for folder in folders:
                 Deleting = False
 
 
-    with open('./test_' + folder + '.json','w', encoding='utf-8') as push_file:
+    with open('./' + folder + '.json','w', encoding='utf-8') as push_file:
             json.dump(final_results_json, push_file, ensure_ascii=False)
