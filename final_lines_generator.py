@@ -20,7 +20,7 @@ import time
 random.seed(30)
 
 # path = "/home/gym/video/img/" #文件夹目录
-path = "./challenge_testing_data/testing_data/video/img/"
+path = "./challenge_testing_data/testing_data/video1/img/"
 
 image_x = 1280
 image_y = 720
@@ -298,7 +298,7 @@ def clean_conflict_line(final_frame_lines, print_cleaning=False):
 dirs = os.listdir(path)  # 得到文件夹下的所有文件名称
 # dirs.sort(key=lambda x: int(x))
 for dir in dirs:  # 遍历文件夹
-    print('Working on dir ', dir)
+    print('In final_lines_generator.py: ', dir)
     final_frame_lines = []
     scores = []
     if not os.path.isdir(path + dir):  # 判断是否是文件夹，不是文件夹才打开
