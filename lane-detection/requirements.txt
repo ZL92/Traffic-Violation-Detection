@@ -4,3 +4,6 @@ tensorboard
 addict
 sklearn
 pathspec
+tensorflow==2.0.0
+pixellib
+torch
