@@ -9,12 +9,18 @@ from numpy import polyfit,poly1d
 from scipy.optimize import leastsq
 import numpy.linalg as LqA
 from scipy.misc import derivative
-path = "/home/gym/video/img/" #文件夹目录
+path = "/home/gym/data/img/" #文件夹目录
 def mkdir(path):
     folder = os.path.exists(path)
     print("mkdir {}".format(path))
     if not folder:
         os.makedirs(path)
+
+font = cv2.FONT_HERSHEY_SIMPLEX
+fontScale = 0.8
+color = (0, 0, 255)
+thickness = 2
+
 ###### if want to use Polar Coords, see https://stackoom.com/question/3vV96/%E6%9B%B2%E7%BA%BF%E6%8B%9F%E5%90%88%E5%92%8Cmatplotlib. Here we just use x-y to y-x
 #def PolarCoords(lane):
 #    x_avg = x.mean()
@@ -36,14 +42,14 @@ def Fun_3(p,x):
 def Error_3(p,x,y):
     return Fun_3(p,x) - y
 
-def ShowLaneFit(x,y,x_fitted):
-    plt.figure()
-    plt.plot(x,y,'r', label = 'Original curve')
-    plt.plot(x_fitted,y,'-b', label ='Fitted curve')
-    plt.legend()
-    plt.show()
+# def ShowLaneFit(x,y,x_fitted):
+#     plt.figure()
+#     plt.plot(x,y,'r', label = 'Original curve')
+#     plt.plot(x_fitted,y,'-b', label ='Fitted curve')
+#     plt.legend()
+#     plt.show()
 
-def LaneFit_3(lane,vis=None):
+def LaneFit_3(lane,vis=None,str = ""):
     y = lane['y']
     x = lane['x']
     p_init = [0,0,0,0.5]
@@ -54,39 +60,41 @@ def LaneFit_3(lane,vis=None):
         p_fit = (int(x_fitted[i]*1280),int(y[i]*720))
         cv2.circle(vis,p_ori,5,(0,255,0),-1)
         cv2.circle(vis,p_fit,5,(0,0,255),-1)
+    org = (int(x_fitted[-1]*1280),int(y[-1]*720))
+    cv2.putText(vis, str, org, font, fontScale, color, thickness, cv2.LINE_AA)
     #ShowLaneFit(x,y,x_fitted)
     return para
 
 ###### lane-fit using leastsq with order 6
 
-def Fun_6(p,x):
-    a1,a2,a3,a4,a5,a6,a7 = p
-    return a1*x**6 + a2*x**5 + a3*x**4 + a4*x**3 + a5*x**2 +a6*x + a7
-
-def Error_6(p,x,y):
-    return Fun_6(p,x) - y
-
-def LaneFit_6(lane):
-    y = lane['y']
-    x = lane['x']
-    p_init = [0,0,0,0,0,0,0.5]
-    para = leastsq(Error_6,p_init,args=(y,x))
-    return para
+# def Fun_6(p,x):
+#     a1,a2,a3,a4,a5,a6,a7 = p
+#     return a1*x**6 + a2*x**5 + a3*x**4 + a4*x**3 + a5*x**2 +a6*x + a7
+#
+# def Error_6(p,x,y):
+#     return Fun_6(p,x) - y
+#
+# def LaneFit_6(lane):
+#     y = lane['y']
+#     x = lane['x']
+#     p_init = [0,0,0,0,0,0,0.5]
+#     para = leastsq(Error_6,p_init,args=(y,x))
+#     return para
 
 ###### evaluation
 
-def tanh(x):
-    s1 = np.exp(x) - np.exp(-x)
-    s2 = np.exp(x) + np.exp(-x)
-    s = s1 / s2
-    return s
-
-def Weight(lane):
-    num = len(lane['x'])
-    return tanh(num/30.)
-
+# def tanh(x):
+#     s1 = np.exp(x) - np.exp(-x)
+#     s2 = np.exp(x) + np.exp(-x)
+#     s = s1 / s2
+#     return s
+#
+# def Weight(lane):
+#     num = len(lane['x'])
+#     return tanh(num/30.)
+#
 def Curve(para,lane):
-    p = np.poly1d(para[0])
+    p = np.poly1d(para)
     C = []
     for y in lane['y']:
         d1 = np.polyder(p,1)(y)
@@ -95,18 +103,35 @@ def Curve(para,lane):
         C.append(c)
     return C
 
-def Evaluation(error,c,w):
-    return w/(1280*error+c)
+#
+# def Evaluation(error,c,w):
+#     return w/(1280*error+c)
 
-def LaneFitMain(lane_data,file_name,vout=None):
+def Evaluation(last_lane_data,lane):
+    y = lane['y']
+    x_fitted = Fun_3(lane['para_3'],y)
+    c_fitted = Curve(lane['para_3'],lane)
+    # print(c_fitted)
+    x_minimum = 1
+    c_minimum = 10
+    for id in last_lane_data:
+        if len(last_lane_data[id]['para_3']) == 0:
+            continue
+        x_last_fitted = Fun_3(last_lane_data[id]['para_3'],y)
+        c_last_fitted = Curve(last_lane_data[id]['para_3'],lane)
+        x_minimum = min(x_minimum,max([abs(x_fitted[i]-x_last_fitted[i]) for i in range(len(y))]))
+        c_minimum = min(c_minimum,max([abs(c_fitted[i]-c_last_fitted[i]) for i in range(len(y))]))
+    return c_minimum*100*x_minimum
+
+def LaneFitMain(last_lane_data,lane_data,file_name,vout=None):
     img_file_name = file_name.replace('line/','')[:-4]+'jpg'
     print("fitting img {}".format(img_file_name))
     vis = cv2.imread(img_file_name)
     vis_good_lane = cv2.imread(img_file_name)
     for id in lane_data:
-        if len(lane_data[id]['x']) < 7:
+        if len(lane_data[id]['x']) < 4:
             lane_data[id]['para_3'] = []
-            lane_data[id]['para_6'] = []
+            # lane_data[id]['para_6'] = []
             continue
         lane_data[id]['x'] = np.array(lane_data[id]['x'])
         lane_data[id]['y'] = np.array(lane_data[id]['y'])
@@ -116,21 +141,38 @@ def LaneFitMain(lane_data,file_name,vout=None):
         error = np.std(error,ddof=1)
         #error = np.sqrt(np.sum(error**2))/len(error)
         #print("fitting {}th lane, with the total error {}.".format(id,error))
-        para_6 = LaneFit_6(lane_data[id])
-        lane_data[id]['para_6'] = para_6[0]
-        w = Weight(lane_data[id])
-        #print("weight {}".format(w))
-        C = Curve(para_6,lane_data[id])
-        c = np.std(C,ddof=1)
-        #print("Curve std {}".format(c))
-        score = Evaluation(error,c,w)
+        # para_6 = LaneFit_6(lane_data[id])
+        # lane_data[id]['para_6'] = para_6[0]
+        # w = Weight(lane_data[id])
+        # #print("weight {}".format(w))
+        # C = Curve(para_6,lane_data[id])
+        # C = np.array(C)
+        # l = len(C)
+        # while True:
+        #     C = C[np.abs(C - C.mean()) <= (2*C.std())]
+        #     if l == len(C):
+        #         break
+        #     else:
+        #         l = len(C)
+        # print("C {} C.std {} C.mean {}".format(C,C.std(),C.mean()))
+        # _C = []
+        # for i in range(len(C)-1):
+        #     _C.append(C[i+1]-C[i])
+        # c = np.std(C,ddof=1)
+        # print("{}th lane' Curve std {}".format(id,c))
+        # score = Evaluation(error,c,w)
+        # LaneFit_3(lane_data[id],vis_good_lane,string)
+        score = Evaluation(last_lane_data,lane_data[id])
         print("{}th lane's score is {}".format(id,score))
-        if score > 0.8:
+        string = "{}".format(round(score,3))
+        # string = str(img_file_name[-7:-3])
+        if score <0.2:
             LaneFit_3(lane_data[id],vis_good_lane)
+        # LaneFit_3(lane_data[id],vis_good_lane,string)
         lane_data[id]['x'] = lane_data[id]['x'].tolist()
         lane_data[id]['y'] = lane_data[id]['y'].tolist()
         lane_data[id]['para_3'] = lane_data[id]['para_3'].tolist()
-        lane_data[id]['para_6'] = lane_data[id]['para_6'].tolist()
+        # lane_data[id]['para_6'] = lane_data[id]['para_6'].tolist()
         lane_data[id]['score'] = score
 
     vout.write(vis_good_lane)
@@ -148,6 +190,7 @@ for dir in dirs: #遍历文件夹
     files = os.listdir(dir)
     files.sort(key = lambda x: int(x[:-5]))
     #print("files {}".format(files))
+    last_lane_data = {}
     for file in files:
         if os.path.isdir(file):
             continue
@@ -170,7 +213,8 @@ for dir in dirs: #遍历文件夹
                 lane_data[lane_id]['x']=[pos[0]]
                 lane_data[lane_id]['y']=[pos[1]]
             #print("{}  {}".format(lane_id,pos))
-        LaneFitMain(lane_data,file_name,vout)
+        LaneFitMain(last_lane_data,lane_data,file_name,vout)
+        last_lane_data = lane_data
         push_data.append(lane_data)
         push_file_name = file_name.replace('line/','para/')
         with open(push_file_name,'w',encoding='utf-8') as push_file:

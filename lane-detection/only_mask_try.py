@@ -10,7 +10,7 @@ from numpy import polyfit,poly1d
 from scipy.optimize import leastsq
 import numpy.linalg as LqA
 from scipy.misc import derivative
-path = "/home/gym/video/img/" #文件夹目录
+path = "/home/gym/data/img/" #文件夹目录
 
 def mkdir(path):
     folder = os.path.exists(path)
@@ -23,7 +23,7 @@ for dir in dirs: #遍历文件夹
     #fourcc = cv2.VideoWriter_fourcc(*'MJPG')
     #vout = cv2.VideoWriter(path+dir+'/lane_fit.avi',fourcc,30.0,(1280,720))
     cut_img_dir = path + dir +'/cut/'
-    mask_folder = path + dir +'/mask_folder/'
+    mask_folder = path + dir +'/mask/'
     cv_para_dir = path + dir +'/cv_para/'
     if not os.path.exists(mask_folder):
         continue
@@ -39,14 +39,15 @@ for dir in dirs: #遍历文件夹
             continue
         file_name = dir + file
         img_file_name = file_name.replace('para/','')[:-4]+'jpg'
-        mask_img_name = file_name.replace('para/','mask_folder/')[:-4]+'jpg'
+        mask_img_name = file_name.replace('para/','mask/corrected_')[:-4]+'jpg'
+        print("file mask_img_name {}".format(mask_img_name))
         mask_obj = cv2.imread(mask_img_name)
         mask_obj = cv2.cvtColor(mask_obj,cv2.COLOR_BGR2GRAY)
         vis = cv2.imread(img_file_name)
 
         masked_image = cv2.GaussianBlur(vis,(5,5),0,0)
         masked_image = cv2.cvtColor(masked_image,cv2.COLOR_BGR2GRAY)
-        
+
         masked_image = cv2.Canny(masked_image,50,159)
         mask=np.zeros(masked_image.shape,dtype=np.uint8)
         roi_corners=np.array([[(0,360),(0,720),(1280,720),(1280,360)]],dtype=np.int32)
@@ -66,7 +67,7 @@ for dir in dirs: #遍历文件夹
         linewidth = 2
         masked_image = cv2.cvtColor(masked_image,cv2.COLOR_GRAY2BGR)
         push_data = []
-        #print("file name {}".format(file_name))
+        print("file name {}".format(file_name))
         if lines is not None:
             #print("lines length {}".format(len(lines)))
             for line in lines:
@@ -91,12 +92,3 @@ for dir in dirs: #遍历文件夹
         with open(push_file_name,'w',encoding='utf-8') as push_file:
             json.dump(push_data,push_file,ensure_ascii=False)
         push_file.close()
-
-
-
-
-
-
-
-
-
